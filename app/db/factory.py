@@ -7,36 +7,25 @@ from .postgres_db import PostgresDatabase
 class DatabaseFactory:
     """
     Factoría para crear instancias de la clase Database. 
-    Selecciona la base de datos a utilizar (PostgreSQL o DynamoDB) 
-    basándose en la variable de entorno DB_TYPE.
+    Se ha simplificado para solo soportar PostgreSQL, dado el requisito del proyecto.
     """
     
     _databases: Dict[str, Type[Database]] = {
-        # Mantener PostgreSQL como opción principal
         'postgres': PostgresDatabase,
     }
     
     @classmethod
     def create(cls, db_type: str = None) -> Database:
         """
-        Crea y retorna una instancia de la base de datos solicitada.
-        Si db_type es None, usa la variable de entorno DB_TYPE, por defecto 'postgres'.
+        Crea y retorna una instancia de PostgresDatabase.
+        Ignora el argumento db_type, pero valida que no sea un valor no soportado.
         """
-        if db_type is None:
-            # db_type se toma de la variable de entorno DB_TYPE, por defecto 'postgres'
-            db_type = os.getenv('DB_TYPE', 'postgres')
-        
-        db_type = db_type.lower()
-        
-        database_class = cls._databases.get(db_type)
-        
-        if database_class is None:
-            available = ', '.join(cls._databases.keys())
+        if db_type is not None and db_type.lower() != 'postgres':
             raise ValueError(
-                f"DB_TYPE '{db_type}' no válido. "
-                f"Opciones disponibles: {available}"
+                f"DB_TYPE '{db_type}' no es compatible. Esta factoría solo soporta 'postgres'."
             )
-        return database_class()
+
+        return cls._databases['postgres']()
     
     @classmethod
     def get_available_databases(cls) -> list:

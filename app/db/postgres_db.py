@@ -1,105 +1,183 @@
+import os
 import psycopg2
 import psycopg2.extras
-import json
+import json # Mirar por si desacoplado
 from typing import List, Optional
 from .db import Database
-from app.models.item import Ticket
-import os
+from models.item import Item 
+
+DB_URL = os.getenv('DATABASE_URL')
 
 class PostgresDatabase(Database):
-    
+    """
+    Implementación de la interfaz Database para PostgreSQL,
+    gestionando la tabla 'items' (personas).
+    """
+
     def __init__(self):
-        self.connection = psycopg2.connect(
-            host=os.getenv('DB_HOST'),
-            user=os.getenv('DB_USER'),
-            password=os.getenv('DB_PASS'),
-            database=os.getenv('DB_NAME')
-        )
-        self.connection.autocommit = True
-        self.initialize()
-    
+        # NOTA: Evitar establecer la conexión en __init__ para aplicaciones Fargate/Lambda.
+        # Es mejor usar un pool o establecer la conexión por método, pero por simplicidad
+        # de laboratorio, la mantendremos aquí y usaremos una función helper.
+        pass
+
+    def _get_connection(self):
+        """Método helper para obtener una nueva conexión a la DB a partir de la URL."""
+        if not DB_URL:
+            # En Fargate, esta URL se debe construir a partir de HOST, USER, PASS, etc.
+            # o pasarse completa como variable de entorno.
+            host = os.getenv('DB_HOST')
+            user = os.getenv('DB_USER')
+            password = os.getenv('DB_PASS')
+            database = os.getenv('DB_NAME')
+            if not all([host, user, password, database]):
+                 raise ValueError("Faltan variables de entorno de PostgreSQL (DB_HOST, etc.)")
+            return psycopg2.connect(
+                host=host, user=user, password=password, database=database
+            )
+        else:
+            return psycopg2.connect(DB_URL)
+
     def initialize(self):
-        with self.connection.cursor() as cursor:
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS tickets (
-                    ticket_id         VARCHAR(36) PRIMARY KEY,
-                    title             VARCHAR(255) NOT NULL,
-                    description       TEXT,
-                    status            VARCHAR(20) DEFAULT 'to do' CHECK (status IN ('to do', 'doing', 'done', 'blocked')),
-                    priority          VARCHAR(10) DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high', 'critic')),
-                    position          INTEGER DEFAULT 0,
-                    created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    due_date          DATE,
-                    tags              JSONB
-                );
-            """)
+        """Inicializa la DB, creando la tabla 'items' si no existe."""
+        conn = None
+        try:
+            conn = self._get_connection()
+            conn.autocommit = True
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS items (
+                        id VARCHAR(15) PRIMARY KEY, -- DNI como clave primaria
+                        nombre VARCHAR(100) NOT NULL,
+                        apellidos VARCHAR(150) NOT NULL,
+                        numero_telefono VARCHAR(20),
+                        puesto_trabajo VARCHAR(50) NOT NULL 
+                            CHECK (puesto_trabajo IN ('desarrollador', 'administrativo', 'notario', 'comercial'))
+                    );
+                """)
+            print("Tabla 'items' verificada/creada exitosamente.")
+        except psycopg2.Error as e:
+            print(f"Error al inicializar la base de datos: {e}")
+            raise
+        finally:
+            if conn:
+                conn.close()
+
+    # --- Operaciones CRUD ---
+    def create_item(self, item: Item) -> Item:
+        """4. Inserta un nuevo item (persona) en la tabla 'items'."""
+        conn = None
+        try:
+            conn = self._get_connection()
+            conn.autocommit = True
+            with conn.cursor() as cursor:
+                sql = """
+                INSERT INTO items 
+                (id, nombre, apellidos, numero_telefono, puesto_trabajo)
+                VALUES (%s, %s, %s, %s, %s)
+                """
+                cursor.execute(sql, (
+                    item.id, 
+                    item.nombre, 
+                    item.apellidos, 
+                    item.numero_telefono, 
+                    item.puesto_trabajo,
+                ))
+            return item
+        except psycopg2.Error:
+            if conn:
+                conn.rollback()
+            raise
+        finally:
+            if conn:
+                conn.close()
     
-    def create_ticket(self, ticket: Ticket) -> Ticket:
-        with self.connection.cursor() as cursor:
-            sql = """
-                INSERT INTO tickets 
-                (ticket_id, title, description, status, priority, position, 
-                 created_at, updated_at, due_date, tags)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """
-            cursor.execute(sql, (
-                ticket.ticket_id, ticket.title, ticket.description, 
-                ticket.status, ticket.priority, ticket.position,
-                ticket.created_at, ticket.updated_at, ticket.due_date,
-                json.dumps(ticket.tags)
-            ))
-        return ticket
+    def get_item(self, item_id: str) -> Optional[Item]:
+        """4. Obtiene un item (persona) por su ID (DNI)."""
+        conn = None
+        try:
+            conn = self._get_connection()
+            # Usamos RealDictCursor para obtener resultados como diccionario
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cursor:
+                sql = "SELECT id, nombre, apellidos, numero_telefono, puesto_trabajo FROM items WHERE id = %s"
+                cursor.execute(sql, (item_id,))
+                record = cursor.fetchone()
+                
+                if record:
+                    return Item(**record)
+                return None
+        except psycopg2.Error:
+            raise
+        finally:
+            if conn:
+                conn.close()
     
-    def get_ticket(self, ticket_id: str) -> Optional[Ticket]:
-        with self.connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cursor:
-            sql = "SELECT * FROM tickets WHERE ticket_id = %s"
-            cursor.execute(sql, (ticket_id,))
-            result = cursor.fetchone()
-            if result:
-                result = dict(result)
-                result['tags'] = result['tags'] or []
-                result['created_at'] = result['created_at'].isoformat() if result['created_at'] else None
-                result['updated_at'] = result['updated_at'].isoformat() if result['updated_at'] else None
-                result['due_date'] = result['due_date'].isoformat() if result['due_date'] else None
-                return Ticket(**result)
-        return None
+    def get_all_items(self) -> List[Item]:
+        """4. Obtiene una lista de todos los items (personas)."""
+        conn = None
+        items = []
+        try:
+            conn = self._get_connection()
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cursor:
+                sql = "SELECT id, nombre, apellidos, numero_telefono, puesto_trabajo FROM items"
+                cursor.execute(sql)
+                records = cursor.fetchall()
+                
+                for row in records:
+                    items.append(Item(**row))
+                return items
+        except psycopg2.Error:
+            raise
+        finally:
+            if conn:
+                conn.close()
     
-    def get_all_tickets(self) -> List[Ticket]:
-        with self.connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cursor:
-            sql = "SELECT * FROM tickets ORDER BY position"
-            cursor.execute(sql)
-            results = cursor.fetchall()
-            tickets = []
-            for row in results:
-                row = dict(row)
-                row['tags'] = row['tags'] or []
-                row['created_at'] = row['created_at'].isoformat() if row['created_at'] else None
-                row['updated_at'] = row['updated_at'].isoformat() if row['updated_at'] else None
-                row['due_date'] = row['due_date'].isoformat() if row['due_date'] else None
-                tickets.append(Ticket(**row))
-            return tickets
+    def update_item(self, item_id: str, item: Item) -> Optional[Item]:
+        """4. Actualiza un item (persona) existente por su ID (DNI)."""
+        conn = None
+        try:
+            conn = self._get_connection()
+            conn.autocommit = True
+            with conn.cursor() as cursor:
+                sql = """
+                    UPDATE items 
+                    SET nombre=%s, apellidos=%s, numero_telefono=%s, puesto_trabajo=%s
+                    WHERE id=%s
+                """
+                cursor.execute(sql, (
+                    item.nombre, 
+                    item.apellidos, 
+                    item.numero_telefono, 
+                    item.puesto_trabajo,
+                    item_id # Se usa el ID de la URL
+                ))
+                
+                if cursor.rowcount > 0:
+                    # El ID original no se cambia en la actualización.
+                    item.id = item_id 
+                    return item
+                return None
+        except psycopg2.Error:
+            if conn:
+                conn.rollback()
+            raise
+        finally:
+            if conn:
+                conn.close()
     
-    def update_ticket(self, ticket_id: str, ticket: Ticket) -> Optional[Ticket]:
-        ticket.update_timestamp()
-        with self.connection.cursor() as cursor:
-            sql = """
-                UPDATE tickets 
-                SET title=%s, description=%s, status=%s, priority=%s, 
-                    position=%s, updated_at=%s, due_date=%s, tags=%s
-                WHERE ticket_id=%s
-            """
-            cursor.execute(sql, (
-                ticket.title, ticket.description, ticket.status, 
-                ticket.priority, ticket.position, ticket.updated_at,
-                ticket.due_date, json.dumps(ticket.tags), ticket_id
-            ))
-            if cursor.rowcount > 0:
-                return self.get_ticket(ticket_id)
-        return None
-    
-    def delete_ticket(self, ticket_id: str) -> bool:
-        with self.connection.cursor() as cursor:
-            sql = "DELETE FROM tickets WHERE ticket_id = %s"
-            cursor.execute(sql, (ticket_id,))
-            return cursor.rowcount > 0
+    def delete_item(self, item_id: str) -> bool:
+        """4. Elimina un item (persona) por su ID (DNI)."""
+        conn = None
+        try:
+            conn = self._get_connection()
+            conn.autocommit = True
+            with conn.cursor() as cursor:
+                sql = "DELETE FROM items WHERE id = %s"
+                cursor.execute(sql, (item_id,))
+                return cursor.rowcount > 0
+        except psycopg2.Error:
+            if conn:
+                conn.rollback()
+            raise
+        finally:
+            if conn:
+                conn.close()

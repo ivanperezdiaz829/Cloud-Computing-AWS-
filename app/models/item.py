@@ -22,7 +22,6 @@ class Item(BaseModel):
     def validate_dni(cls, value: str) -> str:
         """Valida que el campo 'id' (DNI) tenga un formato básico de 8 dígitos y 1 letra."""
         if not re.match(r'^\d{8}[A-Z]$', value.upper()):
-            # La validación real de DNI es compleja, pero esta es una comprobación básica de formato.
             raise ValueError('El DNI debe tener 8 números seguidos de 1 letra (ej: 12345678A).')
         return value.upper()
 
@@ -35,7 +34,6 @@ class Item(BaseModel):
         # Elimina espacios, guiones y paréntesis para almacenamiento limpio
         cleaned_value = re.sub(r'[()\s-]', '', value)
         if not re.match(r'^\+?\d{9,15}$', cleaned_value):
-            # Una validación simple: debe contener solo dígitos y un posible '+' inicial
              raise ValueError('El número de teléfono debe contener solo dígitos y el prefijo opcional "+".')
         return cleaned_value
     

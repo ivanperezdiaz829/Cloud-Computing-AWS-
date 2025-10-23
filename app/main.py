@@ -1,18 +1,21 @@
 from flask import Flask, request, jsonify
 from pydantic import ValidationError
 import psycopg2
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError # Mirar desacoplado
 from models.item import Item 
 from db.factory import DatabaseFactory
 
 app = Flask(__name__)
 
+# --- Inicialización de la Base de Datos ---
 try:
     db = DatabaseFactory.create()
+    db.initialize() 
 
 except ValueError as e:
     raise RuntimeError(f"Error initializing DB: {e}") from e
 
+# --- Middlewares ---
 @app.after_request
 def add_cors_headers(response):
     response.headers['Access-Control-Allow-Origin'] = '*'
@@ -20,6 +23,7 @@ def add_cors_headers(response):
     response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS'
     return response
 
+# --- Endpoints CRUD ---
 @app.route('/items', methods=['POST'])
 def create_item():
     """Crea un nuevo item (persona)."""
@@ -31,14 +35,11 @@ def create_item():
     except ValidationError as e:
         return jsonify({'error': 'Validation error', 'details': e.errors()}), 400
     except psycopg2.IntegrityError as e:
-        return jsonify({'error': 'Database integrity error', 'details': str(e)}), 409
+        return jsonify({'error': 'Database integrity error (ID already exists)', 'details': str(e)}), 409
     except psycopg2.OperationalError as e:
         return jsonify({'error': 'Database connection error', 'details': str(e)}), 503
     except psycopg2.Error as e:
         return jsonify({'error': 'Database error', 'details': str(e)}), 500
-    except ClientError as e:
-        # Se asume error de DynamoDB si se intenta usar
-        return jsonify({'error': 'DynamoDB error', 'details': e.response['Error']['Message']}), 500
 
 @app.route('/items/<item_id>', methods=['GET']) 
 def get_item(item_id):
@@ -52,8 +53,6 @@ def get_item(item_id):
         return jsonify({'error': 'Database connection error', 'details': str(e)}), 503
     except psycopg2.Error as e:
         return jsonify({'error': 'Database error', 'details': str(e)}), 500
-    except ClientError as e:
-        return jsonify({'error': 'DynamoDB error', 'details': e.response['Error']['Message']}), 500
 
 @app.route('/items', methods=['GET'])
 def get_all_items():
@@ -65,9 +64,6 @@ def get_all_items():
         return jsonify({'error': 'Database connection error', 'details': str(e)}), 503
     except psycopg2.Error as e:
         return jsonify({'error': 'Database error', 'details': str(e)}), 500
-    except ClientError as e:
-        # Se asume error de DynamoDB si se intenta usar
-        return jsonify({'error': 'DynamoDB error', 'details': e.response['Error']['Message']}), 500
 
 @app.route('/items/<item_id>', methods=['PUT']) 
 def update_item(item_id):
@@ -91,8 +87,6 @@ def update_item(item_id):
         return jsonify({'error': 'Database connection error', 'details': str(e)}), 503
     except psycopg2.Error as e:
         return jsonify({'error': 'Database error', 'details': str(e)}), 500
-    except ClientError as e:
-        return jsonify({'error': 'DynamoDB error', 'details': e.response['Error']['Message']}), 500
 
 @app.route('/items/<item_id>', methods=['DELETE'])
 def delete_item(item_id):
@@ -105,11 +99,10 @@ def delete_item(item_id):
         return jsonify({'error': 'Database connection error', 'details': str(e)}), 503
     except psycopg2.Error as e:
         return jsonify({'error': 'Database error', 'details': str(e)}), 500
-    except ClientError as e:
-        return jsonify({'error': 'DynamoDB error', 'details': e.response['Error']['Message']}), 500
 
 @app.route('/health', methods=['GET'])
 def health():
+    """Endpoint simple para verificar que el servicio está activo."""
     return jsonify({'status': 'healthy'}), 200
 
 if __name__ == '__main__':

@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -20,7 +19,7 @@
     </style>
 </head>
 <body>
-    <!-- Overlay de Configuración (igual que antes) -->
+    <!-- Overlay de Configuración. Notar que la APP principal YA NO tiene display: none. -->
     <div id="configOverlay" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full">
             <h2 class="text-2xl font-bold text-gray-800 mb-6">🎯 Configuración de la API</h2>
@@ -36,7 +35,8 @@
     </div>
 
     <!-- App Principal: Vista de Tabla de Registros -->
-    <div id="app" class="p-4 sm:p-8" style="display: none;">
+    <!-- Por defecto, la hacemos hidden hasta que se conecte -->
+    <div id="app" class="p-4 sm:p-8 hidden"> 
         <div class="bg-white rounded-xl shadow-lg p-6">
             
             <!-- Encabezado de la Aplicación -->
@@ -160,15 +160,17 @@
         // --- Configuración Inicial ---
 
         window.onload = () => {
-            // No usamos localStorage en el entorno, pero si se usa fuera, esto lo mantendría.
-            const savedUrl = 'https://TU_API_GATEWAY_URL/items'; // URL por defecto para el ejercicio
-            const savedKey = 'YOUR_API_KEY_HERE';
+            // Valores predeterminados (para ayudar al usuario a rellenar)
+            const defaultUrl = 'https://TU_API_GATEWAY_URL/prod/items'; 
+            const defaultKey = 'API_KEY_AQUI'; 
 
-            if (savedUrl && savedKey) {
-                document.getElementById('apiUrl').value = savedUrl;
-                document.getElementById('apiKey').value = savedKey;
-                saveConfig(false); // No forzar la alerta de completado en el inicio
-            }
+            // Cargar los valores por defecto en los campos, pero NO autoconectar
+            document.getElementById('apiUrl').value = defaultUrl;
+            document.getElementById('apiKey').value = defaultKey;
+            
+            // Asegurar que el overlay de configuración esté visible al inicio
+            document.getElementById('configOverlay').style.display = 'flex';
+            document.getElementById('app').style.display = 'none';
         };
 
         function openConfigOverlay() {
@@ -181,18 +183,22 @@
             const key = document.getElementById('apiKey').value.trim();
 
             if (!url || !key) {
-                if(showAlert) alert('Por favor, completa ambos campos');
+                // Usamos showError para no usar alert()
+                showError('Por favor, completa la API URL y la API Key.');
                 return;
             }
 
+            // Limpiamos la URL para evitar barras dobles
             API_URL = url.endsWith('/') ? url.slice(0, -1) : url;
+            // Aseguramos que la URL termina en /items si no lo hace, ya que tu backend Flask usa /items
+            if (!API_URL.endsWith('/items')) {
+                API_URL = `${API_URL}/items`;
+            }
             API_KEY = key;
 
-            // localStorage.setItem('apiUrl', API_URL);
-            // localStorage.setItem('apiKey', API_KEY);
-
+            // Ocultar el overlay y mostrar la app principal
             document.getElementById('configOverlay').style.display = 'none';
-            document.getElementById('app').style.display = 'block';
+            document.getElementById('app').classList.remove('hidden');
 
             loadItems();
         }
@@ -204,7 +210,7 @@
                 method,
                 headers: {
                     'Content-Type': 'application/json',
-                    'x-api-key': API_KEY
+                    'x-api-key': API_KEY // Aquí se envía la API Key
                 }
             };
 
@@ -244,7 +250,8 @@
                 showLoading(true);
                 hideError();
                 
-                items = await apiRequest(''); // El endpoint es ya /items
+                // La URL base ya termina en /items, por lo que el endpoint es ''
+                items = await apiRequest(''); 
                 renderTable();
             } catch (error) {
                 showError(`Error al cargar registros: ${error.message}`);
