@@ -5,7 +5,7 @@ Parameters:
   ImageName:
     Type: String
     Description: ECR Image Name
-    Default: tickets-app:latest
+    Default: items-app:latest
 
   VpcId:
     Type: AWS::EC2::VPC::Id
@@ -20,7 +20,6 @@ Parameters:
     Default: postgres
     AllowedValues:
       - postgres
-      - dynamodb
 
   DBHost:
     Type: String
@@ -43,11 +42,6 @@ Parameters:
     Default: ""
     Description: DB PASS (only DBType=postgres)
 
-  DBDynamoName:
-    Type: String
-    Default: "tickets"
-    Description: DynamoDB table name
-
 # ============================================================================
 # NETWORKING RESOURCES
 # ============================================================================
@@ -69,7 +63,7 @@ Resources:
   NLB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      Name: tickets-nlb
+      Name: items-nlb
       Type: network
       Scheme: internal
       Subnets: !Ref SubnetIds
@@ -77,7 +71,7 @@ Resources:
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      Name: tickets-tg
+      Name: items-tg
       Port: 8080
       Protocol: TCP
       VpcId: !Ref VpcId
@@ -101,12 +95,12 @@ Resources:
   ECSCluster:
     Type: AWS::ECS::Cluster
     Properties:
-      ClusterName: tickets-cluster
+      ClusterName: items-cluster
 
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
-      Family: tickets-task
+      Family: items-task
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
@@ -115,7 +109,7 @@ Resources:
       ExecutionRoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/LabRole"
       TaskRoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/LabRole"
       ContainerDefinitions:
-        - Name: tickets-container
+        - Name: items-container
           Image: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ImageName}"
           PortMappings:
             - ContainerPort: 8080
@@ -123,9 +117,9 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: /ecs/tickets
+              awslogs-group: /ecs/items
               awslogs-region: !Ref AWS::Region
-              awslogs-stream-prefix: tickets
+              awslogs-stream-prefix: items
               awslogs-create-group: "true"
           Environment:
             - Name: DB_TYPE
@@ -138,8 +132,6 @@ Resources:
               Value: !Ref DBUser
             - Name: DB_PASS
               Value: !Ref DBPass
-            - Name: DB_DYNAMONAME
-              Value: !Ref DBDynamoName
 
   ECSService:
     Type: AWS::ECS::Service
@@ -147,7 +139,7 @@ Resources:
       - Listener
     Properties:
       Cluster: !Ref ECSCluster
-      ServiceName: tickets-service
+      ServiceName: items-service
       TaskDefinition: !Ref TaskDefinition
       DesiredCount: 1
       LaunchType: FARGATE
@@ -158,7 +150,7 @@ Resources:
           SecurityGroups:
             - !Ref ECSSecurityGroup
       LoadBalancers:
-        - ContainerName: tickets-container
+        - ContainerName: items-container
           ContainerPort: 8080
           TargetGroupArn: !Ref TargetGroup
 
@@ -168,15 +160,15 @@ Resources:
   VPCLink:
     Type: AWS::ApiGateway::VpcLink
     Properties:
-      Name: tickets-vpc-link
+      Name: items-vpc-link
       TargetArns:
         - !Ref NLB
 
   RestAPI:
     Type: AWS::ApiGateway::RestApi
     Properties:
-      Name: tickets-api
-      Description: API para gestión de tickets
+      Name: items-api
+      Description: API para gestión de items
 
   ItemsResource:
     Type: AWS::ApiGateway::Resource
@@ -356,14 +348,14 @@ Resources:
   APIKey:
     Type: AWS::ApiGateway::ApiKey
     Properties:
-      Name: tickets-api-key
+      Name: items-api-key
       Enabled: true
 
   UsagePlan:
     Type: AWS::ApiGateway::UsagePlan
     DependsOn: APIStage
     Properties:
-      UsagePlanName: tickets-usage-plan
+      UsagePlanName: items-usage-plan
       ApiStages:
         - ApiId: !Ref RestAPI
           Stage: !Ref APIStage

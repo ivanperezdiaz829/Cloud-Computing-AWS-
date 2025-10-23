@@ -12,7 +12,7 @@ Parameters:
 
   DBName:
     Type: String
-    Default: ticketsdb
+    Default: itemsdb
     Description: DB Name
 
   DBUser:
@@ -25,6 +25,7 @@ Parameters:
     NoEcho: true
     MinLength: 8
     Description: Master User Password
+    
 Resources:
   DBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -40,14 +41,14 @@ Resources:
   DBSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
-      DBSubnetGroupName: tickets-db-subnet-group
-      DBSubnetGroupDescription: Subnet group for tickets PostgreSQL database
+      DBSubnetGroupName: items-db-subnet-group
+      DBSubnetGroupDescription: Subnet group for items PostgreSQL database
       SubnetIds: !Ref SubnetIds
 
   PostgresDBInstance:
     Type: AWS::RDS::DBInstance
     Properties:
-      DBInstanceIdentifier: tickets-postgres-db
+      DBInstanceIdentifier: items-postgres-db
       Engine: postgres
       EngineVersion: "17.6"
       DBInstanceClass: db.t3.micro

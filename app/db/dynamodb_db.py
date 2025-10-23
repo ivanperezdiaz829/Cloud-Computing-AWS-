@@ -1,74 +1,39 @@
-import boto3
-from botocore.exceptions import ClientError
+from abc import ABC, abstractmethod
 from typing import List, Optional
-from .db import Database
-from models.ticket import Ticket
-import os
+from models.item import Item 
 
-class DynamoDBDatabase(Database):
-    
-    def __init__(self):
-        self.dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-        self.table_name = os.getenv('DB_DYNAMONAME')
-        self.table = self.dynamodb.Table(self.table_name)
-        self.initialize()
-    
+class Database(ABC):
+    """
+    Clase abstracta que define el contrato de la capa de persistencia (CRUD) 
+    para el recurso 'Item' (que representa a una persona en la DB PostgreSQL).
+    """
+    @abstractmethod
     def initialize(self):
-        try:
-            self.table.load()
-        except ClientError as e:
-            if e.response['Error']['Code'] == 'ResourceNotFoundException':
-                # La tabla no existe, crearla
-                print(f"Creando tabla DynamoDB '{self.table_name}'...")
-                table = self.dynamodb.create_table(
-                    TableName=self.table_name,
-                    KeySchema=[
-                        {
-                            'AttributeName': 'ticket_id',
-                            'KeyType': 'HASH'
-                        }
-                    ],
-                    AttributeDefinitions=[
-                        {
-                            'AttributeName': 'ticket_id',
-                            'AttributeType': 'S'
-                        }
-                    ],
-                    BillingMode='PAY_PER_REQUEST'
-                )
-                
-                # Esperar a que la tabla esté activa
-                table.wait_until_exists()
-                
-                # Actualizar referencia a la tabla
-                self.table = table
-            else:
-                raise
+        """Inicializa la conexión y/o la estructura de la base de datos (ej. crea tablas)."""
+        pass
     
-    def create_ticket(self, ticket: Ticket) -> Ticket:
-        self.table.put_item(Item=ticket.model_dump())
-        return ticket
+    # --- Operaciones CRUD para el recurso 'Item' ---
+    @abstractmethod
+    def create_item(self, item: Item) -> Item:
+        """Crea y persiste un nuevo item en la base de datos."""
+        pass
     
-    def get_ticket(self, ticket_id: str) -> Optional[Ticket]:
-        response = self.table.get_item(Key={'ticket_id': ticket_id})
-        if 'Item' in response:
-            return Ticket(**response['Item'])
-        return None
+    @abstractmethod
+    def get_item(self, item_id: str) -> Optional[Item]:
+        """Obtiene un solo item usando su ID (DNI)."""
+        pass
     
-    def get_all_tickets(self) -> List[Ticket]:
-        response = self.table.scan()
-        tickets = [Ticket(**item) for item in response.get('Items', [])]
-        return sorted(tickets, key=lambda x: x.position)
+    @abstractmethod
+    def get_all_items(self) -> List[Item]:
+        """Obtiene una lista de todos los items."""
+        pass
     
-    def update_ticket(self, ticket_id: str, ticket: Ticket) -> Optional[Ticket]:
-        ticket.update_timestamp()
-        ticket.ticket_id = ticket_id
-        self.table.put_item(Item=ticket.model_dump())
-        return ticket
+    @abstractmethod
+    def update_item(self, item_id: str, item: Item) -> Optional[Item]:
+        """Actualiza un item existente. Retorna el item actualizado o None si no se encuentra."""
+        pass
     
-    def delete_ticket(self, ticket_id: str) -> bool:
-        response = self.table.delete_item(
-            Key={'ticket_id': ticket_id},
-            ReturnValues='ALL_OLD'
-        )
-        return 'Attributes' in response
+    @abstractmethod
+    def delete_item(self, item_id: str) -> bool:
+        """Elimina un item usando su ID. Retorna True si fue exitoso, False en caso contrario."""
+        pass

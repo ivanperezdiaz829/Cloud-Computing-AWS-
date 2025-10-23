@@ -3,7 +3,7 @@ import psycopg2.extras
 import json
 from typing import List, Optional
 from .db import Database
-from models.ticket import Ticket
+from app.models.item import Ticket
 import os
 
 class PostgresDatabase(Database):

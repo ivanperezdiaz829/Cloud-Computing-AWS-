@@ -1,12 +1,14 @@
-CREATE TABLE tickets (
-    ticket_id         VARCHAR(36) PRIMARY KEY,
-    title             VARCHAR(255) NOT NULL,
-    description       TEXT,
-    status            VARCHAR(20) DEFAULT 'to do' CHECK (status IN ('to do', 'doing', 'done', 'blocked')),
-    priority          VARCHAR(10) DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high', 'critic')),
-    position          INTEGER DEFAULT 0,
-    created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    due_date          DATE,
-    tags              JSONB
+CREATE TABLE items (
+    id VARCHAR(15) PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    apellidos VARCHAR(150) NOT NULL,
+    numero_telefono VARCHAR(20),
+    puesto_trabajo VARCHAR(50) NOT NULL CHECK (puesto_trabajo IN ('desarrollador', 'administrativo', 'notario', 'comercial'))
 );
+
+-- Insertar datos Iniciales
+INSERT INTO items (id, nombre, apellidos, numero_telefono, puesto_trabajo) VALUES 
+('12345678A', 'Ana', 'García Pérez', '600112233', 'desarrollador'),
+('98765432B', 'Carlos', 'López Martín', '611223344', 'administrativo'),
+('45678901C', 'Elena', 'Ruiz Gómez', '622334455', 'notario'),
+('01234567D', 'Javier', 'Sánchez Torres', '633445566', 'comercial');
