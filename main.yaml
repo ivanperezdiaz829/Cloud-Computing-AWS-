@@ -1,41 +1,34 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "ECS Fargate + API Gateway REST API with API Key"
+Description: "ECS Fargate + API Gateway REST API with API Key (con OPTIONS para CORS)"
 
 Parameters:
   ImageName:
     Type: String
     Description: ECR Image Name
     Default: items-app:latest
-
   VpcId:
     Type: AWS::EC2::VPC::Id
     Description: VPC
-
   SubnetIds:
     Type: List<AWS::EC2::Subnet::Id>
     Description: At least 2 Subnets
-
   DBType:
     Type: String
     Default: postgres
     AllowedValues:
       - postgres
-
   DBHost:
     Type: String
     Default: ""
     Description: DB Host (only DBType=postgres)
-
   DBName:
     Type: String
     Default: ""
     Description: DB Name (only DBType=postgres)
-
   DBUser:
     Type: String
     Default: ""
     Description: DB User (only DBType=postgres)
-
   DBPass:
     Type: String
     NoEcho: true
@@ -169,6 +162,7 @@ Resources:
     Properties:
       Name: items-api
       Description: API para gestión de items
+      # --- HEMOS QUITADO LA SECCIÓN CorsConfiguration ---
 
   ItemsResource:
     Type: AWS::ApiGateway::Resource
@@ -184,6 +178,7 @@ Resources:
       ParentId: !Ref ItemsResource
       PathPart: "{id}"
 
+  # --- MÉTODOS CRUD ---
   PostItemsMethod:
     Type: AWS::ApiGateway::Method
     Properties:
@@ -271,6 +266,7 @@ Resources:
         RequestParameters:
           integration.request.path.id: method.request.path.id
 
+  # --- MÉTODOS OPTIONS (PARA CORS) ---
   OptionsItemsMethod:
     Type: AWS::ApiGateway::Method
     Properties:
@@ -325,6 +321,8 @@ Resources:
             method.response.header.Access-Control-Allow-Methods: true
             method.response.header.Access-Control-Allow-Origin: true
 
+  # --- FIN DE MÉTODOS OPTIONS ---
+
   APIDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
@@ -333,8 +331,8 @@ Resources:
       - GetItemMethod
       - PutItemMethod
       - DeleteItemMethod
-      - OptionsItemsMethod
-      - OptionsItemMethod
+      - OptionsItemsMethod   # <-- Devuelta
+      - OptionsItemMethod    # <-- Devuelta
     Properties:
       RestApiId: !Ref RestAPI
 
@@ -373,7 +371,7 @@ Resources:
 Outputs:
   APIEndpoint:
     Description: API Gateway URL
-    Value: !Sub "https://${RestAPI}.execute-api.eu-east-1.amazonaws.com/prod"
+    Value: !Sub "https://${RestAPI}.execute-api.us-east-1.amazonaws.com/prod"
 
   APIKeyId:
     Description: API Key ID

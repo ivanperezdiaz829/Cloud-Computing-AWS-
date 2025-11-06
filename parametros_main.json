@@ -1,0 +1,30 @@
+[
+  {
+    "ParameterKey": "ImageName",
+    "ParameterValue": "acoplada:latest"
+  },
+  {
+    "ParameterKey": "VpcId",
+    "ParameterValue": "vpc-04b75223d54440648"
+  },
+  {
+    "ParameterKey": "SubnetIds",
+    "ParameterValue": "subnet-03545818e3bad4638,subnet-025f84b0f7f48314d"
+  },
+  {
+    "ParameterKey": "DBHost",
+    "ParameterValue": "items-postgres-db.cns6iq6cenuj.us-east-1.rds.amazonaws.com"
+  },
+  {
+    "ParameterKey": "DBName",
+    "ParameterValue": "itemsdb"
+  },
+  {
+    "ParameterKey": "DBUser",
+    "ParameterValue": "postgres"
+  },
+  {
+    "ParameterKey": "DBPass",
+    "ParameterValue": "entra123"
+  }
+]
