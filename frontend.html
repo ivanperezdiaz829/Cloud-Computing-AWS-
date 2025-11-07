@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Personal (CRUD Items)</title>
-    <!-- Carga de Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Fuente Inter de Google Fonts (mejora estética) */
@@ -19,7 +18,6 @@
     </style>
 </head>
 <body>
-    <!-- Overlay de Configuración. Notar que la APP principal YA NO tiene display: none. -->
     <div id="configOverlay" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full">
             <h2 class="text-2xl font-bold text-gray-800 mb-6">🎯 Configuración de la API</h2>
@@ -34,12 +32,9 @@
         </div>
     </div>
 
-    <!-- App Principal: Vista de Tabla de Registros -->
-    <!-- Por defecto, la hacemos hidden hasta que se conecte -->
     <div id="app" class="p-4 sm:p-8 hidden"> 
         <div class="bg-white rounded-xl shadow-lg p-6">
             
-            <!-- Encabezado de la Aplicación -->
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b pb-4">
                 <h1 class="text-3xl font-extrabold text-gray-900 flex items-center">
                     🏢 Gestión de Personal
@@ -63,11 +58,9 @@
                 </div>
             </div>
 
-            <!-- Contenedores de Mensajes -->
             <div id="errorContainer"></div>
             <div id="loading" class="text-center py-4 text-lg text-gray-600" style="display: none;">Cargando registros...</div>
 
-            <!-- Tabla de Registros -->
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
@@ -80,7 +73,6 @@
                         </tr>
                     </thead>
                     <tbody id="itemsTableBody" class="bg-white divide-y divide-gray-200">
-                        <!-- Los ítems se insertarán aquí -->
                         <tr>
                             <td colspan="5" class="px-6 py-4 text-sm text-gray-500 text-center" id="emptyState">No hay registros de personal.</td>
                         </tr>
@@ -90,28 +82,23 @@
         </div>
     </div>
 
-    <!-- Modal de crear/editar Item (Persona) -->
     <div id="itemModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white p-8 rounded-xl shadow-2xl max-w-lg w-full">
             <h2 id="modalTitle" class="text-2xl font-bold text-gray-800 mb-6">Nuevo Registro de Personal</h2>
             <form id="itemForm">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- ID (DNI) -->
                     <div class="col-span-1">
                         <label class="block text-sm font-medium text-gray-700">DNI / ID *</label>
                         <input type="text" id="itemId" required class="w-full p-3 border border-gray-300 rounded-lg mt-1 focus:ring-blue-500 focus:border-blue-500 uppercase" placeholder="Ej: 12345678A">
                     </div>
-                    <!-- Nombre -->
                     <div class="col-span-1">
                         <label class="block text-sm font-medium text-gray-700">Nombre *</label>
                         <input type="text" id="itemNombre" required class="w-full p-3 border border-gray-300 rounded-lg mt-1 focus:ring-blue-500 focus:border-blue-500">
                     </div>
-                    <!-- Apellidos -->
                     <div class="col-span-full">
                         <label class="block text-sm font-medium text-gray-700">Apellidos *</label>
                         <input type="text" id="itemApellidos" required class="w-full p-3 border border-gray-300 rounded-lg mt-1 focus:ring-blue-500 focus:border-blue-500">
                     </div>
-                    <!-- Puesto de trabajo -->
                     <div class="col-span-1">
                         <label class="block text-sm font-medium text-gray-700">Puesto de Trabajo *</label>
                         <select id="itemPuesto" required class="w-full p-3 border border-gray-300 rounded-lg mt-1 focus:ring-blue-500 focus:border-blue-500 bg-white">
@@ -121,7 +108,6 @@
                             <option value="comercial">Comercial</option>
                         </select>
                     </div>
-                    <!-- Teléfono -->
                     <div class="col-span-1">
                         <label class="block text-sm font-medium text-gray-700">Número de Teléfono</label>
                         <input type="text" id="itemTelefono" class="w-full p-3 border border-gray-300 rounded-lg mt-1 focus:ring-blue-500 focus:border-blue-500" placeholder="Ej: 600112233">
@@ -170,7 +156,6 @@
             
             // Asegurar que el overlay de configuración esté visible al inicio
             document.getElementById('configOverlay').style.display = 'flex';
-            document.getElementById('app').style.display = 'none';
         };
 
         function openConfigOverlay() {
@@ -353,28 +338,38 @@
             document.getElementById('itemModal').classList.remove('hidden');
         }
 
-        // --- Submit del Formulario ---
+        // --- Submit del Formulario (CORREGIDO) ---
         
         document.getElementById('itemForm').onsubmit = async (e) => {
             e.preventDefault();
 
-            const data = {
-                id: document.getElementById('itemId').value.toUpperCase(),
-                nombre: document.getElementById('itemNombre').value,
-                apellidos: document.getElementById('itemApellidos').value,
-                puesto_trabajo: document.getElementById('itemPuesto').value,
-                numero_telefono: document.getElementById('itemTelefono').value || null
-            };
-
             try {
                 if (currentItemId) {
-                    // PUT (Actualizar)
-                    const updated = await apiRequest(`/${currentItemId}`, 'PUT', data);
+                    // PUT (Actualizar) - NO se envía el ID en el body
+                    const data_for_update = {
+                        nombre: document.getElementById('itemNombre').value,
+                        apellidos: document.getElementById('itemApellidos').value,
+                        puesto_trabajo: document.getElementById('itemPuesto').value,
+                        numero_telefono: document.getElementById('itemTelefono').value || null
+                    };
+
+                    console.log("Datos que se envían en el PUT:", data_for_update);
+
+                    const updated = await apiRequest(`/${currentItemId}`, 'PUT', data_for_update);
                     const index = items.findIndex(i => i.id === currentItemId);
                     if (index !== -1) items[index] = updated;
+
                 } else {
-                    // POST (Crear)
-                    const created = await apiRequest('', 'POST', data);
+                    // POST (Crear) - SÍ se envía el ID en el body
+                    const data_for_create = {
+                        id: document.getElementById('itemId').value.toUpperCase(),
+                        nombre: document.getElementById('itemNombre').value,
+                        apellidos: document.getElementById('itemApellidos').value,
+                        puesto_trabajo: document.getElementById('itemPuesto').value,
+                        numero_telefono: document.getElementById('itemTelefono').value || null
+                    };
+
+                    const created = await apiRequest('', 'POST', data_for_create);
                     items.push(created);
                 }
 

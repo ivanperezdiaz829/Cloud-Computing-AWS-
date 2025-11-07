@@ -73,7 +73,13 @@ def update_item(item_id):
         data.pop('id', None) 
         data.pop('created_at', None) 
         
-        item = Item(**data)
+        # --- CORRECCIÓN ---
+        # Añadimos el 'id' de la URL al diccionario 'data'
+        # para que Pydantic pueda validar el modelo 'Item' completo.
+        data['id'] = item_id
+        # --- FIN DE LA CORRECCIÓN ---
+        
+        item = Item(**data) # Ahora la validación funcionará
         updated = db.update_item(item_id, item)
         
         if updated:
