@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "RDS PostgreSQL"
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC for DB
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Subnets (min 2)
+
+  DBName:
+    Type: String
+    Default: itemsdb
+    Description: DB Name
+
+  DBUser:
+    Type: String
+    Default: postgres
+    Description: Master User
+
+  DBPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    Description: Master User Password
+    
+Resources:
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for RDS PostgreSQL
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: 0.0.0.0/0
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupName: items-db-subnet-group
+      DBSubnetGroupDescription: Subnet group for items PostgreSQL database
+      SubnetIds: !Ref SubnetIds
+
+  PostgresDBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: items-postgres-db
+      Engine: postgres
+      EngineVersion: "17.6"
+      DBInstanceClass: db.t3.micro
+      AllocatedStorage: 20
+      StorageType: gp2
+      DBName: !Ref DBName
+      MasterUsername: !Ref DBUser
+      MasterUserPassword: !Ref DBPassword
+      VPCSecurityGroups:
+        - !Ref DBSecurityGroup
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      PubliclyAccessible: true
+      BackupRetentionPeriod: 0
+      DeletionProtection: false
+
+Outputs:
+  DBEndpoint:
+    Description: PostgreSQL Endpoint
+    Value: !GetAtt PostgresDBInstance.Endpoint.Address
+
+  DBPort:
+    Description: DB PORT
+    Value: !GetAtt PostgresDBInstance.Endpoint.Port
+
+  DBName:
+    Description: DB NAME
+    Value: !Ref DBName
+
+  DBUser:
+    Description: DB USER
+    Value: !Ref DBUser

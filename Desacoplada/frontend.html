@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Personal (CRUD Items)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Fuente Inter de Google Fonts (mejora estética) */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Estilo para el fondo que se vea empresarial, no de tablero Kanban */
+        body {
+            background-color: #f4f7f9;
+        }
+    </style>
+</head>
+<body>
+    <div id="configOverlay" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">🎯 Configuración de la API</h2>
+            <input type="text" id="apiUrl" placeholder="API URL (ej: https://api.example.com/prod)" 
+                   class="w-full p-3 mb-4 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+            <input type="password" id="apiKey" placeholder="API Key" 
+                   class="w-full p-3 mb-6 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+            <button onclick="saveConfig()"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold p-3 rounded-lg transition duration-200 shadow-md">
+                Conectar
+            </button>
+        </div>
+    </div>
+
+    <div id="app" class="p-4 sm:p-8 hidden"> 
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b pb-4">
+                <h1 class="text-3xl font-extrabold text-gray-900 flex items-center">
+                    🏢 Gestión de Personal
+                    <span class="ml-3 text-sm font-medium text-blue-600 bg-blue-100 px-3 py-1 rounded-full">Items</span>
+                </h1>
+                <div class="flex flex-wrap gap-3 mt-4 sm:mt-0">
+                    <button class="flex items-center bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition duration-200 shadow-md" 
+                            onclick="openCreateModal()">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                        Nuevo Registro
+                    </button>
+                    <button class="flex items-center bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium px-4 py-2 rounded-lg transition duration-200 shadow-md" 
+                            onclick="refreshItems()">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11.166 6h-4.582m4.582 0a8.001 8.001 0 01-15.356 2m15.356-2H15"></path></svg>
+                        Actualizar
+                    </button>
+                    <button class="flex items-center bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium px-4 py-2 rounded-lg transition duration-200 shadow-md" 
+                            onclick="openConfigOverlay()">
+                        ⚙️ Config
+                    </button>
+                </div>
+            </div>
+
+            <div id="errorContainer"></div>
+            <div id="loading" class="text-center py-4 text-lg text-gray-600" style="display: none;">Cargando registros...</div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DNI / ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre Completo</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puesto</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="itemsTableBody" class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="5" class="px-6 py-4 text-sm text-gray-500 text-center" id="emptyState">No hay registros de personal.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="itemModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-8 rounded-xl shadow-2xl max-w-lg w-full">
+            <h2 id="modalTitle" class="text-2xl font-bold text-gray-800 mb-6">Nuevo Registro de Personal</h2>
+            <form id="itemForm">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="col-span-1">
+                        <label class="block text-sm font-medium text-gray-700">DNI / ID *</label>
+                        <input type="text" id="itemId" required class="w-full p-3 border border-gray-300 rounded-lg mt-1 focus:ring-blue-500 focus:border-blue-500 uppercase" placeholder="Ej: 12345678A">
+                    </div>
+                    <div class="col-span-1">
+                        <label class="block text-sm font-medium text-gray-700">Nombre *</label>
+                        <input type="text" id="itemNombre" required class="w-full p-3 border border-gray-300 rounded-lg mt-1 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="col-span-full">
+                        <label class="block text-sm font-medium text-gray-700">Apellidos *</label>
+                        <input type="text" id="itemApellidos" required class="w-full p-3 border border-gray-300 rounded-lg mt-1 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="col-span-1">
+                        <label class="block text-sm font-medium text-gray-700">Puesto de Trabajo *</label>
+                        <select id="itemPuesto" required class="w-full p-3 border border-gray-300 rounded-lg mt-1 focus:ring-blue-500 focus:border-blue-500 bg-white">
+                            <option value="desarrollador">Desarrollador</option>
+                            <option value="administrativo">Administrativo</option>
+                            <option value="notario">Notario</option>
+                            <option value="comercial">Comercial</option>
+                        </select>
+                    </div>
+                    <div class="col-span-1">
+                        <label class="block text-sm font-medium text-gray-700">Número de Teléfono</label>
+                        <input type="text" id="itemTelefono" class="w-full p-3 border border-gray-300 rounded-lg mt-1 focus:ring-blue-500 focus:border-blue-500" placeholder="Ej: 600112233">
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 mt-8">
+                    <button type="button" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium px-4 py-2 rounded-lg transition duration-200" onclick="closeModal()">Cancelar</button>
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg transition duration-200 shadow-md">Guardar Registro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let API_URL = '';
+        let API_KEY = '';
+        let currentItemId = null;
+        let items = [];
+
+        // --- Utilidades ---
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            const container = document.getElementById('errorContainer');
+            container.innerHTML = `<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4">${message}</div>`;
+        }
+
+        function hideError() {
+            document.getElementById('errorContainer').innerHTML = '';
+        }
+        
+        // --- Configuración Inicial ---
+
+        window.onload = () => {
+            // Valores predeterminados (para ayudar al usuario a rellenar)
+            const defaultUrl = 'https://TU_API_GATEWAY_URL/prod/items'; 
+            const defaultKey = 'API_KEY_AQUI'; 
+
+            // Cargar los valores por defecto en los campos, pero NO autoconectar
+            document.getElementById('apiUrl').value = defaultUrl;
+            document.getElementById('apiKey').value = defaultKey;
+            
+            // Asegurar que el overlay de configuración esté visible al inicio
+            document.getElementById('configOverlay').style.display = 'flex';
+        };
+
+        function openConfigOverlay() {
+            document.getElementById('configOverlay').style.display = 'flex';
+            document.getElementById('app').style.display = 'none';
+        }
+
+        function saveConfig(showAlert = true) {
+            const url = document.getElementById('apiUrl').value.trim();
+            const key = document.getElementById('apiKey').value.trim();
+
+            if (!url || !key) {
+                // Usamos showError para no usar alert()
+                showError('Por favor, completa la API URL y la API Key.');
+                return;
+            }
+
+            // Limpiamos la URL para evitar barras dobles
+            API_URL = url.endsWith('/') ? url.slice(0, -1) : url;
+            // Aseguramos que la URL termina en /items si no lo hace, ya que tu backend Flask usa /items
+            if (!API_URL.endsWith('/items')) {
+                API_URL = `${API_URL}/items`;
+            }
+            API_KEY = key;
+
+            // Ocultar el overlay y mostrar la app principal
+            document.getElementById('configOverlay').style.display = 'none';
+            document.getElementById('app').classList.remove('hidden');
+
+            loadItems();
+        }
+        
+        // --- Conexión API ---
+
+        async function apiRequest(endpoint, method = 'GET', body = null) {
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': API_KEY // Aquí se envía la API Key
+                }
+            };
+
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+
+            // Simple mecanismo de reintento para manejar fallos transitorios
+            for (let i = 0; i < 3; i++) {
+                try {
+                    const response = await fetch(`${API_URL}${endpoint}`, options);
+                    
+                    if (!response.ok) {
+                        const error = await response.json().catch(() => ({ error: 'Error desconocido' }));
+                        throw new Error(error.error || `Error ${response.status}: ${error.details || 'Fallo en la conexión.'}`);
+                    }
+
+                    if (method === 'DELETE' || response.status === 204) {
+                        return null;
+                    }
+
+                    return await response.json();
+                } catch (e) {
+                    if (i < 2) {
+                        await new Promise(resolve => setTimeout(resolve, 500 * (2 ** i))); // Espera 0.5s, 1s, etc.
+                    } else {
+                        throw e; // Lanza el error después del último reintento
+                    }
+                }
+            }
+        }
+        
+        // --- Lógica de la Aplicación ---
+
+        async function loadItems() {
+            try {
+                showLoading(true);
+                hideError();
+                
+                // La URL base ya termina en /items, por lo que el endpoint es ''
+                items = await apiRequest(''); 
+                renderTable();
+            } catch (error) {
+                showError(`Error al cargar registros: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function refreshItems() {
+            loadItems();
+        }
+
+        function renderTable() {
+            const tableBody = document.getElementById('itemsTableBody');
+            tableBody.innerHTML = '';
+            
+            if (items.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-sm text-gray-500 text-center">No hay registros de personal.</td></tr>';
+                return;
+            }
+
+            items.forEach(item => {
+                tableBody.appendChild(createRow(item));
+            });
+        }
+
+        function createRow(item) {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-100 transition duration-150';
+            row.dataset.itemId = item.id;
+
+            // Función auxiliar para generar el Badge del Puesto de trabajo
+            const getPuestoBadge = (puesto) => {
+                let colorClass;
+                switch(puesto.toLowerCase()) {
+                    case 'desarrollador': colorClass = 'bg-indigo-100 text-indigo-800'; break;
+                    case 'administrativo': colorClass = 'bg-yellow-100 text-yellow-800'; break;
+                    case 'notario': colorClass = 'bg-green-100 text-green-800'; break;
+                    case 'comercial': colorClass = 'bg-red-100 text-red-800'; break;
+                    default: colorClass = 'bg-gray-100 text-gray-800';
+                }
+                return `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${colorClass}">${puesto}</span>`;
+            };
+
+            row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${item.id}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.nombre} ${item.apellidos}</td>
+                <td class="px-6 py-4 whitespace-nowrap">${getPuestoBadge(item.puesto_trabajo)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.numero_telefono || 'N/A'}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button class="text-blue-600 hover:text-blue-900 mr-3" onclick="editItem('${item.id}')">
+                        ✏️ Editar
+                    </button>
+                    <button class="text-red-600 hover:text-red-900" onclick="deleteItem('${item.id}')">
+                        🗑️ Eliminar
+                    </button>
+                </td>
+            `;
+            return row;
+        }
+
+        // --- Gestión del Modal (CRUD UI) ---
+
+        function openCreateModal() {
+            currentItemId = null;
+            document.getElementById('modalTitle').textContent = 'Nuevo Registro de Personal';
+            document.getElementById('itemForm').reset();
+            // Habilitar la edición del ID (DNI) al crear
+            document.getElementById('itemId').readOnly = false; 
+            document.getElementById('itemId').classList.remove('bg-gray-100');
+            document.getElementById('itemModal').classList.add('flex');
+            document.getElementById('itemModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('itemModal').classList.remove('flex');
+            document.getElementById('itemModal').classList.add('hidden');
+            currentItemId = null;
+        }
+
+        async function editItem(itemId) {
+            currentItemId = itemId;
+            const item = items.find(i => i.id === itemId);
+
+            document.getElementById('modalTitle').textContent = `Editar Registro: ${itemId}`;
+            
+            // Llenar formulario
+            document.getElementById('itemId').value = item.id;
+            document.getElementById('itemNombre').value = item.nombre;
+            document.getElementById('itemApellidos').value = item.apellidos;
+            document.getElementById('itemPuesto').value = item.puesto_trabajo;
+            document.getElementById('itemTelefono').value = item.numero_telefono || '';
+            
+            // Deshabilitar la edición del ID (DNI) al editar
+            document.getElementById('itemId').readOnly = true; 
+            document.getElementById('itemId').classList.add('bg-gray-100');
+
+            document.getElementById('itemModal').classList.add('flex');
+            document.getElementById('itemModal').classList.remove('hidden');
+        }
+
+        // --- Submit del Formulario (CORREGIDO) ---
+        
+        document.getElementById('itemForm').onsubmit = async (e) => {
+            e.preventDefault();
+
+            try {
+                if (currentItemId) {
+                    // PUT (Actualizar) - NO se envía el ID en el body
+                    const data_for_update = {
+                        nombre: document.getElementById('itemNombre').value,
+                        apellidos: document.getElementById('itemApellidos').value,
+                        puesto_trabajo: document.getElementById('itemPuesto').value,
+                        numero_telefono: document.getElementById('itemTelefono').value || null
+                    };
+
+                    console.log("Datos que se envían en el PUT:", data_for_update);
+
+                    const updated = await apiRequest(`/${currentItemId}`, 'PUT', data_for_update);
+                    const index = items.findIndex(i => i.id === currentItemId);
+                    if (index !== -1) items[index] = updated;
+
+                } else {
+                    // POST (Crear) - SÍ se envía el ID en el body
+                    const data_for_create = {
+                        id: document.getElementById('itemId').value.toUpperCase(),
+                        nombre: document.getElementById('itemNombre').value,
+                        apellidos: document.getElementById('itemApellidos').value,
+                        puesto_trabajo: document.getElementById('itemPuesto').value,
+                        numero_telefono: document.getElementById('itemTelefono').value || null
+                    };
+
+                    const created = await apiRequest('', 'POST', data_for_create);
+                    items.push(created);
+                }
+
+                renderTable();
+                closeModal();
+            } catch (error) {
+                showError(`Error al guardar el registro: ${error.message}`);
+            }
+        };
+
+        async function deleteItem(itemId) {
+            // Reemplazar alert() con un modal/confirmación más amigable si fuera producción, 
+            // pero mantenemos confirm() para simplicidad de laboratorio.
+            if (!confirm(`¿Estás seguro de eliminar el registro con DNI/ID ${itemId}?`)) {
+                return;
+            }
+
+            try {
+                await apiRequest(`/${itemId}`, 'DELETE');
+                items = items.filter(i => i.id !== itemId);
+                renderTable();
+            } catch (error) {
+                showError(`Error al eliminar el registro: ${error.message}`);
+            }
+        }
+
+        // Cerrar modal al hacer clic fuera
+        document.getElementById('itemModal').onclick = (e) => {
+            if (e.target.id === 'itemModal') {
+                closeModal();
+            }
+        };
+    </script>
+</body>
+</html>

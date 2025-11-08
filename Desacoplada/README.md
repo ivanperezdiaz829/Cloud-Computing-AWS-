@@ -2,10 +2,6 @@
 
 Acceder al fichero ~/.aws/credentials y poner la información entera de AWS CLI que da el laboratorio de AWS (esto actualiza las credenciales)
 
-<h4 style="text-weight: bold">Diagrama de la Infraestructura:</h4>
-
-<img src="/Acoplada/Diagrama_Acoplada.jpeg">
-
 ## Paso 1: Construir y Subir la imagen Docker
 
 ```bash
