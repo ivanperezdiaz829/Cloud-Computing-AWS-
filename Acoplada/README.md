@@ -104,7 +104,7 @@ Primeramente y para poder realizar pasos posteriores como el crear repositorios 
 
 4. Copiar toda la información que aparece en AWS CLI y pegarla dentro de la ruta `~/.aws/credentials`. Guardar lo anterior.
 
-Tras lo anterior y como primer paso para la creación de la infraestructura de acoplada se procede a la creación de la base de datos, para ello y haciendo uso de la consola de CloudFormation se va a crear un nuevo stack cargando la plantilla [db_postgres.yaml](/Acoplada/db_postgres.yaml) y poniendo como contraseña (necesario poner la misma para este proyecto dado que es uno de los parámetros del [parametros_main.json](/Acoplada/parametros_main.json)) "Entra123". Las subnets seleccionadas se han de guardar para ponerlas también en el mismo fichero [parametros_main.json](/Acoplada/parametros_main.json). Una vez realizados los pasos anteriores, se lanza el stack con la base de datos.
+Tras lo anterior y como primer paso para la creación de la infraestructura de acoplada se procede a la creación de la base de datos, para ello y haciendo uso de la consola de CloudFormation se va a crear un nuevo stack cargando la plantilla [db_postgres.yaml](/Acoplada/db_postgres.yaml) y poniendo como contraseña (necesario poner la misma para este proyecto dado que es uno de los parámetros del [parametros_main.json](/Acoplada/parametros_main.json)) "Entra123". Las subnets seleccionadas se han de guardar para ponerlas también en el mismo fichero [parametros_main.json](/Acoplada/parametros_main.json) y también la VPC. Una vez realizados los pasos anteriores, se lanza el stack con la base de datos.
 
 Una vez ponga **CREATE_COMPLETE** se puede pasar al siguiente paso.
 
@@ -117,7 +117,7 @@ Para este paso es necesario crear el repositorio **ECR** que lance la aplicació
       aws ecr create-repository --repository-name acoplada --region us-east-1
       ```
 
-2. Iniciar sesión de Dockert en ECR:
+2. Iniciar sesión de Docker en ECR:
 
       ```bash
       # Debería aparecer -> Login Succeeded
