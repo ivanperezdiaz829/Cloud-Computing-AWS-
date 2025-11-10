@@ -6,7 +6,7 @@ Versión Acoplada de una infraestuctura con base de datos PostgreSQL y que crea 
 
 <img src="/Acoplada/Diagrama_Acoplada.jpeg">
 
-## Índice
+## ÍNDICE
 
 - [Componentes principales](#componentes-principales)
 - [Estructura del proyecto](#estructura-del-proyecto)
@@ -15,7 +15,7 @@ Versión Acoplada de una infraestuctura con base de datos PostgreSQL y que crea 
 - [Presupuesto y gastos de la infraestructura](#presupuesto-y-gatos-de-la-infraestructura)
 - [Fuentes y documentación](#fuentes-y-documentación)
 
-## Componentes principales
+## COMPONENTES PRINCIPALES
 
 - **API Gateway (REST)**: Expone los recursos `items` e `item` (Personas individuales o en grupo) y enruta al backend vía VPC Link. Protegido con API Key.
 - **VPC Link y NLB**: El VPC Link conecta API Gateway con un Network Load Balancer interno que apunta al servicio de ECS.
@@ -23,7 +23,7 @@ Versión Acoplada de una infraestuctura con base de datos PostgreSQL y que crea 
 - **Base de datos**: PostgreSQL (Amazon RDS) en el VPC, con SG de acceso al puerto 5432.
 - **Amazon ECR**: Repositorio para la imagen del contenedor de Docker.
 
-## Estructura del proyecto
+## ESTRUCTURA DEL PROYECTO
 
 ```bash
 Acoplada
@@ -47,7 +47,7 @@ Acoplada
     requirements.txt
 ```
 
-<h4 style="text-weight: bold">Directorio Acoplada:</h4>
+<h4 style="text-weight: bold">Directorio /Acoplada/:</h4>
 
 - **[db_postgres.yaml](/Acoplada/db_postgres.yaml):** Plantilla para RDS PostgreSQL.
 - **[Diagrama_Acoplada.jpeg](/Acoplada/Diagrama_Acoplada.jpeg):** Diagrama de la Infraestructura del proyecto Acoplado con los componentes interconectados.
@@ -88,7 +88,7 @@ La API posee los siguientes métodos para realizar peticiones mediante la aplica
 
 Los errores y respuestas se validan mediante *pydantic* y vienen definidas en el fichero [main.py](/Acoplada/app/main.py) explicado anteriormente.
 
-## Proceso de creación
+## PROCESO DE CREACIÓN
 
 Primeramente y para poder realizar pasos posteriores como el crear repositorios ECR con la imagen de Docker para crear el stack dentro de AWS, se van a realizar los siguientes pasos:
 
@@ -159,7 +159,7 @@ Una vez el Stack lanzado ponga **CREATE_COMPLETE** ya se ha completado el lanzam
 Con todo lo anterior, se podrá entrar dentro de la aplicación final y gestionar los items (personas) haciendo peticiones a la API de CREATE, READ, UPDATE y DELETE.
 
 
-## Presupuesto y gatos de la infraestructura
+## PRESUPUESTO Y GASTOS DE LA INFRAESTRUCTURA
 
 La infraestructura lanzada no es gratis de mantener, teniendo un costo por uso o por existencia en el tiempo, todos estos gastos son necesarios conocerlos para crear una infraestructura económica y que supla los requerimientos.
 
@@ -186,7 +186,7 @@ Por lo tanto, los precios totales de la infraestructura son los siguientes (para
 
 **NOTA:** No se están contemplando los precios variables en el cálculo de los totales.
 
-## Fuentes y Documentación
+## FUENTES Y DOCUMENTACIÓN
 
 - **Internet:** Se ha utilizado internet para buscar diversos recursos, además de hacer mucho uso de la documentación propia de AWS ([AWS documentation](https://docs.aws.amazon.com)). Adicionalmente, se ha utilizado la página [Lucidchart](https://lucid.app) para realizar la creación del diagrama de la infraestructura creada.
 
