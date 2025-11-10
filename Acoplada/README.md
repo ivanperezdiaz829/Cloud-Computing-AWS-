@@ -6,58 +6,22 @@ Versión Acoplada de una infraestuctura con base de datos PostgreSQL y que crea 
 
 <img src="/Acoplada/Diagrama_Acoplada.jpeg">
 
+## Índice
 
-## Paso 1: Construir y Subir la imagen Docker
-
-
-
-```bash
-# Iniciar sesión de Docker en ECR
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 211125679469.dkr.ecr.us-east-1.amazonaws.com
-# Debería aparecer -> Login Succeeded
-```
-
-```bash
-# Construir imagen
-docker build -t acoplada:latest .
-```
-
-```bash
-# Etiquetar la imagen para ECR
-docker tag acoplada:latest 211125679469.dkr.ecr.us-east-1.amazonaws.com/acoplada:latest
-```
-
-```bash
-# Subir (Push) la imagen a ECR
-docker push 211125679469.dkr.ecr.us-east-1.amazonaws.com/acoplada:latest
-```
-
-Tras lo anterior se deben ubicar dos nuevas imágenes en Docker, una con el nombre completo y la otra con el nombre elegido, en este caso "acoplada", aún teniendo diferente nombre, el image ID es el mismo dado que en realidad el nombre es un TAG que se ha puesto para diferenciar más comodamente las imágenes.
-
-## Paso 2: Lanzar el Stack de CloudFormation
-
-Entrar a VPC y obtener la el ID del VPC, de las subnets.
-
-Obtener el host, nombre, usuario y contraseña de la Base de datos PostgreSQL a partir del db_postgres.yaml. Para ello, primero se ha de inicializar la Base de Datos mediante la interfaz gráfica usando la creación de Stacks y cargando la plantilla .yaml.
-
-Para crear el Stack del main.yaml usar el siguiente comando
-
-```bash
-aws cloudformation create-stack `
---stack-name mi-app-temporal `
---template-body file://main.yaml `
---parameters file://parametros_main.json `
---capabilities CAPABILITY_IAM
-```
+- [Componentes principales](#componentes-principales)
+- [Estructura del proyecto](#estructura-del-proyecto)
+- [API](#api)
+- [Proceso de creación](#proceso-de-creación)
+- [Presupuesto y gastos de la infraestructura](#presupuesto-y-gatos-de-la-infraestructura)
+- [Fuentes y documentación](#fuentes-y-documentación)
 
 ## Componentes principales
 
-- **API Gateway (REST)**: expone los recursos `items` e `item` y enruta al backend vía VPC Link. Protegido con API Key.
-- **VPC Link + NLB**: el VPC Link conecta API Gateway con un Network Load Balancer interno que apunta al servicio de ECS.
-- **ECS Fargate**: ejecuta el contenedor de la app Flask definido en `Dockerfile` y `main.yml`.
-- **Bases de datos**:
-  - **PostgreSQL (Amazon RDS)** en el VPC, con SG de acceso al puerto 5432.
-- **Amazon ECR**: repositorio para la imagen del contenedor.
+- **API Gateway (REST)**: Expone los recursos `items` e `item` (Personas individuales o en grupo) y enruta al backend vía VPC Link. Protegido con API Key.
+- **VPC Link y NLB**: El VPC Link conecta API Gateway con un Network Load Balancer interno que apunta al servicio de ECS.
+- **ECS Fargate**: Ejecuta el contenedor de la app Flask definido en `Dockerfile` y `main.yml`.
+- **Base de datos**: PostgreSQL (Amazon RDS) en el VPC, con SG de acceso al puerto 5432.
+- **Amazon ECR**: Repositorio para la imagen del contenedor de Docker.
 
 ## Estructura del proyecto
 
@@ -208,7 +172,7 @@ La infraestructura lanzada no es gratis de mantener, teniendo un costo por uso o
 - **Precio del NLB (Network Load Manager):** El NLB tiene un precio fijo de 0.0225$ por hora, por lo tanto, en un día cuesta 0.54$, 3.78$ por semana, 15.12$ al mes y 181.44$ al año.
 
 - **Costos variables:** Adicionalmente, el proyecto tiene ciertos costos que son por el uso, son los siguientes:
-  - API Gateway: Se paga por cada millón de peticiones.
+  - API Gateway: Se paga por cada millón de peticiones al mes (con la capa gratuita, si no habría que especificar Quota y calcular los precios).
   - NLB (Procesamiento): Además del costo fijo, el NLB cobra por los datos que procesa (por NLCU-hora).
   - Transferencia de Datos: Cualquier dato que salga de AWS a Internet (ej. las respuestas de la API) tiene un costo.
 
@@ -216,10 +180,24 @@ Por lo tanto, los precios totales de la infraestructura son los siguientes (para
 
 - **Coste por hora global:** 0.0406425$.
 - **Coste por día global:** 0.97547$.
-- **Coste por semana global:** 
+- **Coste por semana global:** 6.8283$.
+- **Coste por mes global:** 27.3132$.
+- **Coste por año global:** 327.7584$.
 
-### Notas
+**NOTA:** No se están contemplando los precios variables en el cálculo de los totales.
 
-- La región de las prácticas es `us-east-1`.
-- El contenedor expone el puerto 8080 y el NLB escucha en el mismo puerto.
-- Se deja tanto el grupo de seguridad de la tarea de ECS como de la BBDD abierto para que los alumnos puedan acceder desde fuera para validar su trabajo. Permitiéndoles debuggear de forma sencilla.
+## Fuentes y Documentación
+
+- **Internet:** Se ha utilizado internet para buscar diversos recursos, además de hacer mucho uso de la documentación propia de AWS ([AWS documentation](https://docs.aws.amazon.com)). Adicionalmente, se ha utilizado la página [Lucidchart](https://lucid.app) para realizar la creación del diagrama de la infraestructura creada.
+
+- **Inteligencia Artificial Generativa (ChatGPT, Gemini):** Se ha utilizado la inteligencia artificial generativa para preguntar diversas dudas acerca de la creación de la propia infraestructura, funcionamiento de AWS y Docker, se ha utilizado para generar un código base, que posteriormente ha sido revisado y estudiado para modificar los campos y recursos para obtener la infraestructura con los requisitos necesarios y se ha utilizado para realizar revisiones explicativas y ejemplos de uso para comprender el funcionamiento de ciertos recursos.
+
+- **Enlaces:**
+    - https://docs.aws.amazon.com
+    - https://lucid.app
+    - https://aws.amazon.com/es/
+    - https://chatgpt.com/
+    - https://gemini.google.com
+    - https://awsacademy.instructure.com
+
+Para ver la versión desacoplada del proyecto, véase el direcotorio [Desacoplada](/Desacoplada/).
