@@ -1,4 +1,4 @@
-# **Infraestructuras Acoplada y Desacoplada mediante AWS**
+# **INFRAESTRUCTURA ACOPLADA DE ECS CON AWS**
 
 Versión Acoplada de una infraestuctura con base de datos PostgreSQL y que crea una aplicacion FlasK de gestión de empresa (personas, DNIs, departamento, etc) haciendo uso de un balanceador de carga y con un diseño monolítico con ECS (Elastic Container Service).
 
