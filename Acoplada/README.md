@@ -9,10 +9,7 @@ Versión Acoplada de una infraestuctura con base de datos PostgreSQL y que crea 
 
 ## Paso 1: Construir y Subir la imagen Docker
 
-```bash
-# El nombre y la región se modificará dependiendo de la imagen y la cuenta
-aws ecr create-repository --repository-name acoplada --region us-east-1
-```
+
 
 ```bash
 # Iniciar sesión de Docker en ECR
@@ -115,78 +112,111 @@ Acoplada
 
 ## API
 
-- **POST** `/items`: crea un ticket.
-- **GET** `/items`: lista de tickets.
-- **GET** `/items/{ticket_id}`: obtiene un ticket.
-- **PUT** `/items/{ticket_id}`: actualiza un ticket.
-- **DELETE** `/items/{ticket_id}`: borra un ticket.
-- **GET** `/health`: comprobación de vida.
+La API posee los siguientes métodos para realizar peticiones mediante la aplicación.
 
-Las respuestas de error gestionan validación (`pydantic`), integridad/operación de PostgreSQL y errores de DynamoDB.
+  - **PostItemsMethod:** Crea nuevos items (Personas) con los parámetros que los componen.
+  - **GetItemsMethod:** Obtiene todas los items (Obtiene lista de personas).
+  - **GetItemMethod:** Obtiene un solo item (Obtiene Persona).
+  - **PutItemMethod:** Modifica el item seleccionado (Edita Persona).
+  - **DeleteItemMethod:** Elimina el item seleccionado (Elimina Persona).
+  - **OptionsItemsMethod:** Es el uno de los Options que se usan para el CORS.
+  - **OptionsItemMethod:** Es el otro de los Options que se usan para el CORS.
 
-## Variables de entorno
+Los errores y respuestas se validan mediante *pydantic* y vienen definidas en el fichero [main.py](/Acoplada/app/main.py) explicado anteriormente.
 
-- **DB_TYPE**: `postgres` (por defecto) o `dynamodb`.
-- Si `DB_TYPE=postgres`:
-  - **DB_HOST**, **DB_NAME**, **DB_USER**, **DB_PASS**.
-- Si `DB_TYPE=dynamodb`:
-  - **DB_DYNAMONAME**: nombre de la tabla (por defecto `tickets`).
+## Proceso de creación
 
-### Ejecución local (opcional)
+Primeramente y para poder realizar pasos posteriores como el crear repositorios ECR con la imagen de Docker para crear el stack dentro de AWS, se van a realizar los siguientes pasos:
 
-```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-# Ejemplo usando PostgreSQL local
-export DB_TYPE=postgres DB_HOST=localhost DB_NAME=ticketsdb DB_USER=postgres DB_PASS=postgres
-python app/main.py
-# La API quedará en http://localhost:8080
-```
+1. Iniciar el laboratorio de AWS y entrar al apartado llamado: *"AWS Details"*.
 
-### Contenedor
+2. En el terminal del dispositivo que se esté usando instalar *amazon cli* (en caso de no tenerlo instalado).
 
-```bash
-# Construir
-docker build -t tickets-app:latest .
-# Ejecutar
-docker run --rm -p 8080:8080 \
-  -e DB_TYPE=postgres \
-  -e DB_HOST=host.docker.internal -e DB_NAME=ticketsdb -e DB_USER=postgres -e DB_PASS=postgres \
-  tickets-app:latest
-```
+3. En el mismo terminal hacer el siguiente comando: `aws configure`. Pedirá diferentes parámetros y claves que se pueden encontrar en el punto 1. Los datos pedidos son:
+      - AWS Access Key ID
+      - AWS Secret Access Key.
+      - Default region name (pulsar enter sin modificar nada).
+      - Default output format (pulsar enter sin modificar nada).
 
-### Despliegue en AWS (CloudFormation)
+4. Copiar toda la información que aparece en AWS CLI y pegarla dentro de la ruta `~/.aws/credentials`. Guardar lo anterior.
 
-Orden recomendado de plantillas:
+Tras lo anterior y como primer paso para la creación de la infraestructura de acoplada se procede a la creación de la base de datos, para ello y haciendo uso de la consola de CloudFormation se va a crear un nuevo stack cargando la plantilla [db_postgres.yaml](/Acoplada/db_postgres.yaml) y poniendo como contraseña (necesario poner la misma para este proyecto dado que es uno de los parámetros del [parametros_main.json](/Acoplada/parametros_main.json)) "Entra123". Las subnets seleccionadas se han de guardar para ponerlas también en el mismo fichero [parametros_main.json](/Acoplada/parametros_main.json). Una vez realizados los pasos anteriores, se lanza el stack con la base de datos.
 
-1. `ecr.yml` → crea el repositorio y subir la imagen.
-2. `db_postgres.yml` o `db_dynamodb.yml` → crea la base de datos elegida.
-3. `main.yml` → despliega VPC Link, NLB, ECS Fargate, API Gateway y enlaza la imagen y variables.
+Una vez ponga **CREATE_COMPLETE** se puede pasar al siguiente paso.
 
-Parámetros clave de `main.yml`:
+Para este paso es necesario crear el repositorio **ECR** que lance la aplicación a través de Docker, y para ello se han de utilizar los siguientes comandos (el número que aparece en algunos de ellos al principio de una cadena tal que "NÚMERO".dkr.):
 
-- **ImageName**: `<repo>:<tag>` en ECR.
-- **VpcId**, **SubnetIds**: VPC y subredes existentes.
-- **DBType**: `postgres` o `dynamodb`.
-- Campos de DB correspondientes: `DBHost`, `DBName`, `DBUser`, `DBPass` o `DBDynamoName`.
+1. Crear el repositorio ECR:
 
-### Probar con `frontend.html`
+      ```bash
+      # El nombre y la región se modificará dependiendo de la imagen y la cuenta
+      aws ecr create-repository --repository-name acoplada --region us-east-1
+      ```
 
-`frontend.html` es una página estática que consume los endpoints del API Gateway usando `fetch` y la cabecera `x-api-key`.
+2. Iniciar sesión de Dockert en ECR:
 
-Uso rápido:
+      ```bash
+      # Debería aparecer -> Login Succeeded
+      aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 098189193517.dkr.ecr.us-east-1.amazonaws.com
+      ```
 
-1. Abrir el archivo `frontend.html` en el navegador (doble clic o `file:///...`).
-2. En el modal de configuración inicial, introducir:
-   - **API URL**: la URL del Stage (por ejemplo, `https://<rest-api-id>.execute-api.us-east-1.amazonaws.com/prod`).
-   - **API Key**: el valor de la API Key creada por `main.yml`.
-3. Pulsar “Conectar”.
-4. Crear/editar/mover tickets en el tablero. Las operaciones llaman a `POST /items`, `GET /items`, `PUT /items/{id}` y `DELETE /items/{id}` del API Gateway.
+3. Contruir imagen:
 
-Notas:
+      ```bash
+      docker build -t acoplada:latest .
+      ```
 
-- La configuración (URL y API Key) se guarda en `localStorage` del navegador.
-- Si la API Key no es válida o el CORS falla, la app mostrará un mensaje de error.
+4. Etiquetar la imagen para ECR:
+
+      ```bash
+      # Etiquetar la imagen para ECR
+      docker tag acoplada:latest 098189193517.dkr.ecr.us-east-1.amazonaws.com/acoplada:latest
+      ```
+
+5. Subir al imagen a ECR:
+
+      ```bash
+      # Subir (Push) la imagen a ECR
+      docker push 098189193517.dkr.ecr.us-east-1.amazonaws.com/acoplada:latest
+      ```
+
+6. Lanzar el Stack de Cloud Formation:
+
+      ```bash
+      aws cloudformation create-stack `
+      --stack-name mi-app-temporal `
+      --template-body file://main.yaml `
+      --parameters file://parametros_main.json `
+      --capabilities CAPABILITY_IAM
+      ```
+
+Una vez el Stack lanzado ponga **CREATE_COMPLETE** ya se ha completado el lanzamiento de la infraestructura, para probar la misma se va a hacer uso del [frontend.html](/Acoplada/frontend.html), que se ha de lanzar mediante cualquier método de su preferencia, nada más entrar, pedirá la **API KEY** y el **API ENDPOINT**. Para el primero, se ha de ir a la consola de AWS llamada *API Gateway* y en donde pone *Claves API*, seleccionar la del proyecto y copiar la clave. Para el segundo, en el propio stack en la consola de CloudFormation seleccionando el stack creado y tras moverse al apartado *Salidas*, copiar la URL que aparece.
+
+Con todo lo anterior, se podrá entrar dentro de la aplicación final y gestionar los items (personas) haciendo peticiones a la API de CREATE, READ, UPDATE y DELETE.
+
+
+## Presupuesto y gatos de la infraestructura
+
+La infraestructura lanzada no es gratis de mantener, teniendo un costo por uso o por existencia en el tiempo, todos estos gastos son necesarios conocerlos para crear una infraestructura económica y que supla los requerimientos.
+
+- **Precio e instancia de la Base de datos:** Se usa la **t3.micro** (temas de que es temporalmente gratis para la capa gratuita) que cuesta una cantidad de 0.0104$ por hora, 0.2496$ por día, 1.7472$ por semana, 6.9888$ por mes y 83.8656$ por año. En caso de no tener la capa gratuita que da cierto tiempo gratis, es mucho más económico usar otro tipo de instancia como la **t2.nano** o **t3.nano**. Con la **t2.nano** el precio sería: 0.0058$ por hora, 0.1392$ por día, 0.9744$ por semana, 3.8976$ por mes y 46.7712$ por año.
+
+- **Precio del AWS Fargate:** En el proyecto reserva 24/7 una cantidad de 0.25 de vCPU y 0.5GB de memoria.
+  - Costo CPU: 0.25 * 0.04048$ por hora, 0.2428$ por día, 1.6996$ por semana, 6.7984$ por mes y 81.5808$ por año.
+  - Costo Memoria: 0.5 * 0.004445 por hora, 0.05347$ por día, 0.3743$ por semana, 1.4972$ por mes y 17.9664$ por año.
+
+- **Precio del NLB (Network Load Manager):** El NLB tiene un precio fijo de 0.0225$ por hora, por lo tanto, en un día cuesta 0.54$, 3.78$ por semana, 15.12$ al mes y 181.44$ al año.
+
+- **Costos variables:** Adicionalmente, el proyecto tiene ciertos costos que son por el uso, son los siguientes:
+  - API Gateway: Se paga por cada millón de peticiones.
+  - NLB (Procesamiento): Además del costo fijo, el NLB cobra por los datos que procesa (por NLCU-hora).
+  - Transferencia de Datos: Cualquier dato que salga de AWS a Internet (ej. las respuestas de la API) tiene un costo.
+
+Por lo tanto, los precios totales de la infraestructura son los siguientes (para los cálculos se va a usar la t2.nano dado que sería la que usaría sin la capa gratuita):
+
+- **Coste por hora global:** 0.0406425$.
+- **Coste por día global:** 0.97547$.
+- **Coste por semana global:** 
 
 ### Notas
 
