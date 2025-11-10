@@ -359,7 +359,6 @@ Resources:
 Outputs:
   APIEndpoint:
     Description: API Gateway URL
-    # CORRECCIÓN 3: Usar la variable de región
     Value: !Sub "https://${RestAPI}.execute-api.${AWS::Region}.amazonaws.com/prod"
 
   APIKeyId:

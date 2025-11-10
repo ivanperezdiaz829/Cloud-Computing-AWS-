@@ -162,7 +162,6 @@ Resources:
     Properties:
       Name: items-api
       Description: API para gestión de items
-      # --- HEMOS QUITADO LA SECCIÓN CorsConfiguration ---
 
   ItemsResource:
     Type: AWS::ApiGateway::Resource
@@ -331,8 +330,8 @@ Resources:
       - GetItemMethod
       - PutItemMethod
       - DeleteItemMethod
-      - OptionsItemsMethod   # <-- Devuelta
-      - OptionsItemMethod    # <-- Devuelta
+      - OptionsItemsMethod
+      - OptionsItemMethod
     Properties:
       RestApiId: !Ref RestAPI
 
