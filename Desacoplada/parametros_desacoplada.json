@@ -1,0 +1,42 @@
+[
+  {
+    "ParameterKey": "VpcId",
+    "ParameterValue": "vpc-02ed0e03850283f55"
+  },
+  {
+    "ParameterKey": "SubnetIds",
+    "ParameterValue": "subnet-067c3b23bb410d5a3,subnet-067a56fd05153338f"
+  },
+  {
+    "ParameterKey": "DBHost",
+    "ParameterValue": "items-proxy.proxy-cw1iltfagg88.us-east-1.rds.amazonaws.com"
+  },
+  {
+    "ParameterKey": "DBName",
+    "ParameterValue": "itemsdb"
+  },
+  {
+    "ParameterKey": "DBUser",
+    "ParameterValue": "postgres"
+  },
+  {
+    "ParameterKey": "DBPass",
+    "ParameterValue": "entra123"
+  },
+  {
+    "ParameterKey": "CreateLambdaImageRepo",
+    "ParameterValue": "lambda-create"
+  },
+  {
+    "ParameterKey": "GetLambdaImageRepo",
+    "ParameterValue": "lambda-get"
+  },
+  {
+    "ParameterKey": "UpdateLambdaImageRepo",
+    "ParameterValue": "lambda-update"
+  },
+  {
+    "ParameterKey": "DeleteLambdaImageRepo",
+    "ParameterValue": "lambda-delete"
+  }
+]

@@ -1,0 +1,15 @@
+FROM public.ecr.aws/lambda/python:3.12
+
+# Dependencias
+COPY requirements.txt ${LAMBDA_TASK_ROOT}
+
+# Instalar las dependencias
+RUN pip install -r requirements.txt
+
+# Código
+COPY ./db ./db
+COPY ./models ./models
+COPY lambda_delete.py ${LAMBDA_TASK_ROOT}
+
+# Comando Lambda a ejecutar
+CMD [ "lambda_delete.handler" ]
