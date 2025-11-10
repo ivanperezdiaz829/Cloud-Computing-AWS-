@@ -2,7 +2,7 @@
 
 <h4 style="text-weight: bold">Diagrama de la Infraestructura:</h4>
 
-<img src="/Acoplada/Diagrama_Desacoplada.jpeg">
+<img src="/Desacoplada/Diagrama_Desacoplada.jpeg">
 
 ## Paso 1: Construir y Subir la imagen Docker Hacerlo con cada lambda
 
